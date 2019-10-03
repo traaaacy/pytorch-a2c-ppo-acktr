@@ -1,8 +1,7 @@
 # pytorch-a2c-ppo-acktr
 
-A PyTorch implementation of PPO for use with the pretrained models provided in Assistive Gym.  
-This library includes scripts for training and evluating multi agent policies using co-optimization;  
-specifically, `main_dual_agent.py` and `enjoy_dual_agent.py`.
+A PyTorch implementation of PPO for use with the pretrained models provided in [Assistive Gym](https://github.com/Healthcare-Robotics/assistive-gym).  
+This library includes scripts for training and evluating multi agent policies using co-optimization; specifically, `main_dual_agent.py` and `enjoy_dual_agent.py`.
 
 ## Examples
 Refer to [Assistive Gym](https://github.com/Healthcare-Robotics/assistive-gym) for more detailed use cases of this reinforcement learning library.
@@ -63,4 +62,3 @@ pip install -e .
 # Other requirements
 pip install -r requirements.txt
 ```
-
