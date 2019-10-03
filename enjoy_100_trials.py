@@ -1,5 +1,4 @@
-import argparse
-import os
+import os, sys, argparse
 
 import numpy as np
 import torch
@@ -7,9 +6,7 @@ import torch
 from a2c_ppo_acktr.envs import VecPyTorch, make_vec_envs
 from a2c_ppo_acktr.utils import get_render_func, get_vec_normalize
 
-
-# workaround to unpickle olf model files
-import sys
+# workaround to unpickle old model files
 sys.path.append('a2c_ppo_acktr')
 
 parser = argparse.ArgumentParser(description='RL')
@@ -33,9 +30,6 @@ env = make_vec_envs(args.env_name, args.seed + 1000, 1,
                             None, None, args.add_timestep, device='cpu',
                             allow_early_resets=False)
 
-# Get a render function
-render_func = get_render_func(env)
-
 # We need to use the same statistics for normalization as used in training
 actor_critic, ob_rms = torch.load(os.path.join(args.load_dir, args.env_name + ".pt"))
 
@@ -47,35 +41,48 @@ if vec_norm is not None:
 recurrent_hidden_states = torch.zeros(1, actor_critic.recurrent_hidden_state_size)
 masks = torch.zeros(1, 1)
 
-if render_func is not None:
-    render_func('human')
-
 obs = env.reset()
 
-if args.env_name.find('Bullet') > -1:
-    import pybullet as p
+iteration = 0
+rewards = []
+forces = []
+task_successes = []
+for iteration in range(100):
+    done = False
+    reward_total = 0.0
+    force_total = 0.0
+    force_list = []
+    task_success = 0.0
+    while not done:
+        with torch.no_grad():
+            value, action, _, recurrent_hidden_states = actor_critic.act(obs, recurrent_hidden_states, masks, deterministic=args.det)
+        iteration += 1
 
-    torsoId = -1
-    for i in range(p.getNumBodies()):
-        if (p.getBodyInfo(i)[0].decode() == "torso"):
-            torsoId = i
+        # Obser reward and next obs
+        obs, reward, done, info = env.step(action)
+        reward = reward.numpy()[0, 0]
+        reward_total += reward
+        force_list.append(info[0]['total_force_on_human'])
+        task_success = info[0]['task_success']
 
-while True:
-    with torch.no_grad():
-        value, action, _, recurrent_hidden_states = actor_critic.act(
-            obs, recurrent_hidden_states, masks, deterministic=args.det)
+        masks.fill_(0.0 if done else 1.0)
 
-    # Obser reward and next obs
-    obs, reward, done, _ = env.step(action)
+    rewards.append(reward_total)
+    forces.append(np.mean(force_list))
+    task_successes.append(task_success)
+    print('Reward total:', reward_total, 'Mean force:', np.mean(force_list), 'Task success:', task_success)
+    sys.stdout.flush()
 
-    masks.fill_(0.0 if done else 1.0)
+print('Rewards:', rewards)
+print('Reward Mean:', np.mean(rewards))
+print('Reward Std:', np.std(rewards))
 
-    if args.env_name.find('Bullet') > -1:
-        if torsoId > -1:
-            distance = 5
-            yaw = 0
-            humanPos, humanOrn = p.getBasePositionAndOrientation(torsoId)
-            p.resetDebugVisualizerCamera(distance, yaw, -20, humanPos)
+print('Forces:', forces)
+print('Force Mean:', np.mean(forces))
+print('Force Std:', np.std(forces))
 
-    if render_func is not None:
-        render_func('human')
+print('Task Successes:', task_successes)
+print('Task Success Mean:', np.mean(task_successes))
+print('Task Success Std:', np.std(task_successes))
+sys.stdout.flush()
+

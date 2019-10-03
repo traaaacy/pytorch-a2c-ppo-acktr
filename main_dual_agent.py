@@ -6,6 +6,7 @@ import sys
 from collections import deque
 
 import gym
+from gym import spaces
 import assistive_gym
 import numpy as np
 import torch
@@ -29,6 +30,9 @@ if args.recurrent_policy:
     assert args.algo in ['a2c', 'ppo'], \
         'Recurrent policy is not implemented for ACKTR'
 
+action_space_robot = spaces.Box(low=np.array([-1.0]*args.action_robot), high=np.array([1.0]*args.action_robot), dtype=np.float32)
+action_space_human = spaces.Box(low=np.array([-1.0]*args.action_human), high=np.array([1.0]*args.action_human), dtype=np.float32)
+
 num_updates = int(args.num_env_steps) // args.num_steps // args.num_processes
 
 torch.manual_seed(args.seed)
@@ -40,7 +44,7 @@ if args.cuda and torch.cuda.is_available() and args.cuda_deterministic:
 
 try:
     os.makedirs(args.log_dir)
-except OSError:
+except (OSError, FileExistsError) as e:
     files = glob.glob(os.path.join(args.log_dir, '*.monitor.csv'))
     for f in files:
         os.remove(f)
@@ -67,9 +71,13 @@ def main():
     envs = make_vec_envs(args.env_name, args.seed, args.num_processes,
                         args.gamma, args.log_dir, args.add_timestep, device, False)
 
-    actor_critic = Policy(envs.observation_space.shape, envs.action_space,
+    actor_critic_robot = Policy([args.obs_robot], action_space_robot,
         base_kwargs={'recurrent': args.recurrent_policy})
-    actor_critic.to(device)
+    actor_critic_robot.to(device)
+
+    actor_critic_human = Policy([args.obs_human], action_space_human,
+        base_kwargs={'recurrent': args.recurrent_policy})
+    actor_critic_human.to(device)
 
     if args.algo == 'a2c':
         agent = algo.A2C_ACKTR(actor_critic, args.value_loss_coef,
@@ -77,7 +85,11 @@ def main():
                                eps=args.eps, alpha=args.alpha,
                                max_grad_norm=args.max_grad_norm)
     elif args.algo == 'ppo':
-        agent = algo.PPO(actor_critic, args.clip_param, args.ppo_epoch, args.num_mini_batch,
+        agent_robot = algo.PPO(actor_critic_robot, args.clip_param, args.ppo_epoch, args.num_mini_batch,
+                         args.value_loss_coef, args.entropy_coef, lr=args.lr,
+                               eps=args.eps,
+                               max_grad_norm=args.max_grad_norm)
+        agent_human = algo.PPO(actor_critic_human, args.clip_param, args.ppo_epoch, args.num_mini_batch,
                          args.value_loss_coef, args.entropy_coef, lr=args.lr,
                                eps=args.eps,
                                max_grad_norm=args.max_grad_norm)
@@ -85,13 +97,24 @@ def main():
         agent = algo.A2C_ACKTR(actor_critic, args.value_loss_coef,
                                args.entropy_coef, acktr=True)
 
-    rollouts = RolloutStorage(args.num_steps, args.num_processes,
-                        envs.observation_space.shape, envs.action_space,
-                        actor_critic.recurrent_hidden_state_size)
+    rollouts_robot = RolloutStorage(args.num_steps, args.num_processes,
+                        [args.obs_robot], action_space_robot,
+                        actor_critic_robot.recurrent_hidden_state_size)
+    rollouts_human = RolloutStorage(args.num_steps, args.num_processes,
+                        [args.obs_human], action_space_human,
+                        actor_critic_human.recurrent_hidden_state_size)
 
     obs = envs.reset()
-    rollouts.obs[0].copy_(obs)
-    rollouts.to(device)
+    obs_robot = obs[:, :args.obs_robot]
+    obs_human = obs[:, args.obs_robot:]
+    if len(obs_robot[0]) != args.obs_robot or len(obs_human[0]) != args.obs_human:
+        print('robot obs shape:', obs_robot.shape, 'obs space robot shape:', [args.obs_robot])
+        print('human obs shape:', obs_human.shape, 'obs space human shape:', [args.obs_human])
+        exit()
+    rollouts_robot.obs[0].copy_(obs_robot)
+    rollouts_robot.to(device)
+    rollouts_human.obs[0].copy_(obs_human)
+    rollouts_human.to(device)
 
     episode_rewards = deque(maxlen=10)
 
@@ -104,21 +127,30 @@ def main():
                 # use optimizer's learning rate since it's hard-coded in kfac.py
                 update_linear_schedule(agent.optimizer, j, num_updates, agent.optimizer.lr)
             else:
-                update_linear_schedule(agent.optimizer, j, num_updates, args.lr)
+                update_linear_schedule(agent_robot.optimizer, j, num_updates, args.lr)
+                update_linear_schedule(agent_human.optimizer, j, num_updates, args.lr)
 
         if args.algo == 'ppo' and args.use_linear_clip_decay:
-            agent.clip_param = args.clip_param  * (1 - j / float(num_updates))
+            agent_robot.clip_param = args.clip_param  * (1 - j / float(num_updates))
+            agent_human.clip_param = args.clip_param  * (1 - j / float(num_updates))
 
         for step in range(args.num_steps):
             # Sample actions
             with torch.no_grad():
-                value, action, action_log_prob, recurrent_hidden_states = actor_critic.act(
-                        rollouts.obs[step],
-                        rollouts.recurrent_hidden_states[step],
-                        rollouts.masks[step])
+                value_robot, action_robot, action_log_prob_robot, recurrent_hidden_states_robot = actor_critic_robot.act(
+                        rollouts_robot.obs[step],
+                        rollouts_robot.recurrent_hidden_states[step],
+                        rollouts_robot.masks[step])
+                value_human, action_human, action_log_prob_human, recurrent_hidden_states_human = actor_critic_human.act(
+                        rollouts_human.obs[step],
+                        rollouts_human.recurrent_hidden_states[step],
+                        rollouts_human.masks[step])
 
             # Obser reward and next obs
+            action = torch.cat((action_robot, action_human), dim=-1)
             obs, reward, done, infos = envs.step(action)
+            obs_robot = obs[:, :args.obs_robot]
+            obs_human = obs[:, args.obs_robot:]
 
             for info in infos:
                 if 'episode' in info.keys():
@@ -127,18 +159,25 @@ def main():
             # If done then clean the history of observations.
             masks = torch.FloatTensor([[0.0] if done_ else [1.0]
                                        for done_ in done])
-            rollouts.insert(obs, recurrent_hidden_states, action, action_log_prob, value, reward, masks)
+            rollouts_robot.insert(obs_robot, recurrent_hidden_states_robot, action_robot, action_log_prob_robot, value_robot, reward, masks)
+            rollouts_human.insert(obs_human, recurrent_hidden_states_human, action_human, action_log_prob_human, value_human, reward, masks)
 
         with torch.no_grad():
-            next_value = actor_critic.get_value(rollouts.obs[-1],
-                                                rollouts.recurrent_hidden_states[-1],
-                                                rollouts.masks[-1]).detach()
+            next_value_robot = actor_critic_robot.get_value(rollouts_robot.obs[-1],
+                                                rollouts_robot.recurrent_hidden_states[-1],
+                                                rollouts_robot.masks[-1]).detach()
+            next_value_human = actor_critic_human.get_value(rollouts_human.obs[-1],
+                                                rollouts_human.recurrent_hidden_states[-1],
+                                                rollouts_human.masks[-1]).detach()
 
-        rollouts.compute_returns(next_value, args.use_gae, args.gamma, args.tau)
+        rollouts_robot.compute_returns(next_value_robot, args.use_gae, args.gamma, args.tau)
+        rollouts_human.compute_returns(next_value_human, args.use_gae, args.gamma, args.tau)
 
-        value_loss, action_loss, dist_entropy = agent.update(rollouts)
+        value_loss_robot, action_loss_robot, dist_entropy_robot = agent_robot.update(rollouts_robot)
+        value_loss_human, action_loss_human, dist_entropy_human = agent_human.update(rollouts_human)
 
-        rollouts.after_update()
+        rollouts_robot.after_update()
+        rollouts_human.after_update()
 
         # save for every interval-th episode or for the last epoch
         if (j % args.save_interval == 0 or j == num_updates - 1) and args.save_dir != "":
@@ -149,11 +188,13 @@ def main():
                 pass
 
             # A really ugly way to save a model to CPU
-            save_model = actor_critic
+            save_model_robot = actor_critic_robot
+            save_model_human = actor_critic_human
             if args.cuda:
-                save_model = copy.deepcopy(actor_critic).cpu()
+                save_model_robot = copy.deepcopy(actor_critic_robot).cpu()
+                save_model_human = copy.deepcopy(actor_critic_human).cpu()
 
-            save_model = [save_model,
+            save_model = [save_model_robot, save_model_human,
                           getattr(get_vec_normalize(envs), 'ob_rms', None)]
 
             torch.save(save_model, os.path.join(save_path, args.env_name + ".pt"))
@@ -162,15 +203,15 @@ def main():
 
         if j % args.log_interval == 0 and len(episode_rewards) > 1:
             end = time.time()
-            print("Updates {}, num timesteps {}, FPS {} \n Last {} training episodes: mean/median reward {:.1f}/{:.1f}, min/max reward {:.1f}/{:.1f}\n".
+            print("Robot/Human updates {}, num timesteps {}, FPS {} \n Last {} training episodes: mean/median reward {:.1f}/{:.1f}, min/max reward {:.1f}/{:.1f}\n".
                 format(j, total_num_steps,
                        int(total_num_steps / (end - start)),
                        len(episode_rewards),
                        np.mean(episode_rewards),
                        np.median(episode_rewards),
                        np.min(episode_rewards),
-                       np.max(episode_rewards), dist_entropy,
-                       value_loss, action_loss))
+                       np.max(episode_rewards), dist_entropy_robot,
+                       value_loss_robot, action_loss_robot))
             sys.stdout.flush()
 
         if (args.eval_interval is not None
@@ -188,17 +229,26 @@ def main():
             eval_episode_rewards = []
 
             obs = eval_envs.reset()
-            eval_recurrent_hidden_states = torch.zeros(args.num_processes,
-                            actor_critic.recurrent_hidden_state_size, device=device)
+            obs_robot = obs[:, :args.obs_robot]
+            obs_human = obs[:, args.obs_robot:]
+            eval_recurrent_hidden_states_robot = torch.zeros(args.num_processes,
+                            actor_critic_robot.recurrent_hidden_state_size, device=device)
+            eval_recurrent_hidden_states_human = torch.zeros(args.num_processes,
+                            actor_critic_human.recurrent_hidden_state_size, device=device)
             eval_masks = torch.zeros(args.num_processes, 1, device=device)
 
             while len(eval_episode_rewards) < 10:
                 with torch.no_grad():
-                    _, action, _, eval_recurrent_hidden_states = actor_critic.act(
-                        obs, eval_recurrent_hidden_states, eval_masks, deterministic=True)
+                    _, action_robot, _, eval_recurrent_hidden_states_robot = actor_critic_robot.act(
+                        obs_robot, eval_recurrent_hidden_states_robot, eval_masks, deterministic=True)
+                    _, action_human, _, eval_recurrent_hidden_states_human = actor_critic_human.act(
+                        obs_human, eval_recurrent_hidden_states_human, eval_masks, deterministic=True)
 
                 # Obser reward and next obs
+                action = torch.cat((action_robot, action_human), dim=-1)
                 obs, reward, done, infos = eval_envs.step(action)
+                obs_robot = obs[:, :args.obs_robot]
+                obs_human = obs[:, args.obs_robot:]
 
                 eval_masks = torch.FloatTensor([[0.0] if done_ else [1.0]
                                                 for done_ in done])

@@ -69,6 +69,14 @@ def get_args():
                         help='enable visdom visualization')
     parser.add_argument('--port', type=int, default=8097,
                         help='port to run the server on (default: 8097)')
+    parser.add_argument('--action-robot', type=int, default=7,
+                        help='Dimensionality of robot action')
+    parser.add_argument('--action-human', type=int, default=7,
+                        help='Dimensionality of human action')
+    parser.add_argument('--obs-robot', type=int, default=27,
+                        help='Dimensionality of robot obs')
+    parser.add_argument('--obs-human', type=int, default=28,
+                        help='Dimensionality of human obs')
     args = parser.parse_args()
 
     args.cuda = not args.no_cuda and torch.cuda.is_available()
