@@ -5,7 +5,7 @@ import numpy as np
 import torch
 
 from a2c_ppo_acktr.envs import VecPyTorch, make_vec_envs
-from a2c_ppo_acktr.utils import get_render_func, get_vec_normalize
+from a2c_ppo_acktr.utils import get_vec_normalize
 
 
 # workaround to unpickle olf model files
@@ -25,17 +25,28 @@ parser.add_argument('--add-timestep', action='store_true', default=False,
                     help='add timestep to observations')
 parser.add_argument('--non-det', action='store_true', default=False,
                     help='whether to use a non-deterministic policy')
-parser.add_argument('--obs-robot', type=int, default=27,
-                    help='Dimensionality of robot obs')
-parser.add_argument('--obs-human', type=int, default=28,
-                    help='Dimensionality of human obs')
 args = parser.parse_args()
 
 args.det = not args.non_det
 
-env = make_vec_envs(args.env_name, args.seed + 1000, 1,
-                            None, None, args.add_timestep, device='cpu',
-                            allow_early_resets=False)
+env = make_vec_envs(args.env_name, args.seed + 1000, 1, None, None,
+                    args.add_timestep, device='cpu', allow_early_resets=False)
+
+# Determine the observation lengths for the robot and human, respectively
+obs = env.reset()
+action = torch.tensor([env.action_space.sample()])
+_, _, _, info = env.step(action)
+obs_robot_len = info[0]['obs_robot_len']
+obs_human_len = info[0]['obs_human_len']
+obs_robot = obs[:, :obs_robot_len]
+obs_human = obs[:, obs_robot_len:]
+if len(obs_robot[0]) != obs_robot_len or len(obs_human[0]) != obs_human_len:
+    print('robot obs shape:', obs_robot.shape, 'obs space robot shape:', (obs_robot_len,))
+    print('human obs shape:', obs_human.shape, 'obs space human shape:', (obs_human_len,))
+    exit()
+
+env = make_vec_envs(args.env_name, args.seed + 1000, 1, None, None,
+                    args.add_timestep, device='cpu', allow_early_resets=False)
 
 # We need to use the same statistics for normalization as used in training
 actor_critic_robot, actor_critic_human, ob_rms = torch.load(os.path.join(args.load_dir, args.env_name + ".pt"))
@@ -49,13 +60,10 @@ recurrent_hidden_states_robot = torch.zeros(1, actor_critic_robot.recurrent_hidd
 recurrent_hidden_states_human = torch.zeros(1, actor_critic_human.recurrent_hidden_state_size)
 masks = torch.zeros(1, 1)
 
+# Reset environment
 obs = env.reset()
-obs_robot = obs[:, :args.obs_robot]
-obs_human = obs[:, args.obs_robot:]
-if len(obs_robot[0]) != args.obs_robot or len(obs_human[0]) != args.obs_human:
-    print('robot obs shape:', obs_robot.shape, 'obs space robot shape:', [args.obs_robot])
-    print('human obs shape:', obs_human.shape, 'obs space human shape:', [args.obs_human])
-    exit()
+obs_robot = obs[:, :obs_robot_len]
+obs_human = obs[:, obs_robot_len:]
 
 iteration = 0
 rewards = []
@@ -78,8 +86,8 @@ for iteration in range(100):
         # Obser reward and next obs
         action = torch.cat((action_robot, action_human), dim=-1)
         obs, reward, done, info = env.step(action)
-        obs_robot = obs[:, :args.obs_robot]
-        obs_human = obs[:, args.obs_robot:]
+        obs_robot = obs[:, :obs_robot_len]
+        obs_human = obs[:, obs_robot_len:]
         reward = reward.numpy()[0, 0]
         reward_total += reward
         force_list.append(info[0]['total_force_on_human'])

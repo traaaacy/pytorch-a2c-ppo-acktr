@@ -30,9 +30,6 @@ if args.recurrent_policy:
     assert args.algo in ['a2c', 'ppo'], \
         'Recurrent policy is not implemented for ACKTR'
 
-action_space_robot = spaces.Box(low=np.array([-1.0]*args.action_robot), high=np.array([1.0]*args.action_robot), dtype=np.float32)
-action_space_human = spaces.Box(low=np.array([-1.0]*args.action_human), high=np.array([1.0]*args.action_human), dtype=np.float32)
-
 num_updates = int(args.num_env_steps) // args.num_steps // args.num_processes
 
 torch.manual_seed(args.seed)
@@ -68,14 +65,40 @@ def main():
         viz = Visdom(port=args.port)
         win = None
 
+    envs = make_vec_envs(args.env_name, args.seed, 1,
+                        args.gamma, args.log_dir, args.add_timestep, device, False)
+
+    # Determine the observation and action lengths for the robot and human, respectively
+    obs = envs.reset()
+    action = torch.tensor([envs.action_space.sample()])
+    _, _, _, info = envs.step(action)
+    obs_robot_len = info[0]['obs_robot_len']
+    obs_human_len = info[0]['obs_human_len']
+    action_robot_len = info[0]['action_robot_len']
+    action_human_len = info[0]['action_human_len']
+    obs_robot = obs[:, :obs_robot_len]
+    obs_human = obs[:, obs_robot_len:]
+    if len(obs_robot[0]) != obs_robot_len or len(obs_human[0]) != obs_human_len:
+        print('robot obs shape:', obs_robot.shape, 'obs space robot shape:', (obs_robot_len,))
+        print('human obs shape:', obs_human.shape, 'obs space human shape:', (obs_human_len,))
+        exit()
+
     envs = make_vec_envs(args.env_name, args.seed, args.num_processes,
                         args.gamma, args.log_dir, args.add_timestep, device, False)
 
-    actor_critic_robot = Policy([args.obs_robot], action_space_robot,
+    # Reset environment
+    obs = envs.reset()
+    obs_robot = obs[:, :obs_robot_len]
+    obs_human = obs[:, obs_robot_len:]
+
+    action_space_robot = spaces.Box(low=np.array([-1.0]*action_robot_len), high=np.array([1.0]*action_robot_len), dtype=np.float32)
+    action_space_human = spaces.Box(low=np.array([-1.0]*action_human_len), high=np.array([1.0]*action_human_len), dtype=np.float32)
+
+    actor_critic_robot = Policy([obs_robot_len], action_space_robot,
         base_kwargs={'recurrent': args.recurrent_policy})
     actor_critic_robot.to(device)
 
-    actor_critic_human = Policy([args.obs_human], action_space_human,
+    actor_critic_human = Policy([obs_human_len], action_space_human,
         base_kwargs={'recurrent': args.recurrent_policy})
     actor_critic_human.to(device)
 
@@ -98,19 +121,11 @@ def main():
                                args.entropy_coef, acktr=True)
 
     rollouts_robot = RolloutStorage(args.num_steps, args.num_processes,
-                        [args.obs_robot], action_space_robot,
+                        [obs_robot_len], action_space_robot,
                         actor_critic_robot.recurrent_hidden_state_size)
     rollouts_human = RolloutStorage(args.num_steps, args.num_processes,
-                        [args.obs_human], action_space_human,
+                        [obs_human_len], action_space_human,
                         actor_critic_human.recurrent_hidden_state_size)
-
-    obs = envs.reset()
-    obs_robot = obs[:, :args.obs_robot]
-    obs_human = obs[:, args.obs_robot:]
-    if len(obs_robot[0]) != args.obs_robot or len(obs_human[0]) != args.obs_human:
-        print('robot obs shape:', obs_robot.shape, 'obs space robot shape:', [args.obs_robot])
-        print('human obs shape:', obs_human.shape, 'obs space human shape:', [args.obs_human])
-        exit()
     rollouts_robot.obs[0].copy_(obs_robot)
     rollouts_robot.to(device)
     rollouts_human.obs[0].copy_(obs_human)
@@ -149,8 +164,8 @@ def main():
             # Obser reward and next obs
             action = torch.cat((action_robot, action_human), dim=-1)
             obs, reward, done, infos = envs.step(action)
-            obs_robot = obs[:, :args.obs_robot]
-            obs_human = obs[:, args.obs_robot:]
+            obs_robot = obs[:, :obs_robot_len]
+            obs_human = obs[:, obs_robot_len:]
 
             for info in infos:
                 if 'episode' in info.keys():
@@ -229,8 +244,8 @@ def main():
             eval_episode_rewards = []
 
             obs = eval_envs.reset()
-            obs_robot = obs[:, :args.obs_robot]
-            obs_human = obs[:, args.obs_robot:]
+            obs_robot = obs[:, :obs_robot_len]
+            obs_human = obs[:, obs_robot_len:]
             eval_recurrent_hidden_states_robot = torch.zeros(args.num_processes,
                             actor_critic_robot.recurrent_hidden_state_size, device=device)
             eval_recurrent_hidden_states_human = torch.zeros(args.num_processes,
@@ -247,8 +262,8 @@ def main():
                 # Obser reward and next obs
                 action = torch.cat((action_robot, action_human), dim=-1)
                 obs, reward, done, infos = eval_envs.step(action)
-                obs_robot = obs[:, :args.obs_robot]
-                obs_human = obs[:, args.obs_robot:]
+                obs_robot = obs[:, :obs_robot_len]
+                obs_human = obs[:, obs_robot_len:]
 
                 eval_masks = torch.FloatTensor([[0.0] if done_ else [1.0]
                                                 for done_ in done])

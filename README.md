@@ -8,15 +8,17 @@ Refer to [Assistive Gym](https://github.com/Healthcare-Robotics/assistive-gym) f
 
 ### Training - Static human
 ```bash
-python3 main.py --env-name "ScratchItchJaco-v0" --algo ppo --use-gae --log-interval 1 --num-steps 200 --num-processes 8 --lr 3e-4 --entropy-coef 0 --value-loss-coef 0.5 --ppo-epoch 10 --num-mini-batch 32 --gamma 0.99 --tau 0.95 --num-env-steps 10000000 --use-linear-lr-decay --save-interval 10 --save-dir ./trained_models/
+python3 main.py --env-name "ScratchItchJaco-v0" --num-env-steps 10000000
 ```
-We suggest using `nohup` to train policies in the background, disconnected from a terminal instance.
+We suggest using `nohup` to train policies in the background, disconnected from the terminal instance.
 ```bash
-nohup python3 main.py --env-name "ScratchItchJaco-v0" --algo ppo --use-gae --log-interval 1 --num-steps 200 --num-processes 8 --lr 3e-4 --entropy-coef 0 --value-loss-coef 0.5 --ppo-epoch 10 --num-mini-batch 32 --gamma 0.99 --tau 0.95 --num-env-steps 10000000 --use-linear-lr-decay --save-interval 10 --save-dir ./trained_models/ > nohup.out &
+nohup python3 main.py --env-name "ScratchItchJaco-v0" --num-env-steps 10000000 --save-dir ./trained_models/ > nohup.out &
 ```
+See [arguments.py](https://github.com/Zackory/pytorch-a2c-ppo-acktr/blob/master/a2c_ppo_acktr/arguments.py) for a full list of available arguments and hyperparameters.
+
 ### Training - Co-optimization, active human and robot
 ```bash
-python3 main_dual_agent.py --env-name "FeedingSawyerHuman-v0" --algo ppo --use-gae --log-interval 1 --num-steps 200 --num-processes 8 --lr 3e-4 --entropy-coef 0 --value-loss-coef 0.5 --ppo-epoch 10 --num-mini-batch 32 --gamma 0.99 --tau 0.95 --num-env-steps 10000000 --use-linear-lr-decay --save-interval 10 --save-dir ./trained_models/ --action-robot 7 --action-human 4 --obs-robot 25 --obs-human 23
+python3 main_dual_agent.py --env-name "FeedingSawyerHuman-v0" --num-env-steps 10000000
 ```
 ### Evaluation - Static human
 ```
@@ -24,7 +26,7 @@ python3 enjoy.py --load-dir trained_models/ppo --env-name "ScratchItchJaco-v0"
 ```
 ### Evaluation - Co-optimization, active human and robot
 ```
-python3 enjoy_dual_agent.py --load-dir trained_models/ppo --env-name "FeedingSawyerHuman-v0" --obs-robot 25 --obs-human 23
+python3 enjoy_dual_agent.py --load-dir trained_models/ppo --env-name "FeedingSawyerHuman-v0"
 ```
 
 ## pytorch-a2c-ppo-acktr-gail
@@ -43,9 +45,8 @@ Please use this bibtex if you want to cite this repository in your publications:
 
 ## Requirements
 
-* Python 3 (it might work with Python 2, but I didn't test it)
+* Python 3
 * [PyTorch](http://pytorch.org/)
-* [Visdom](https://github.com/facebookresearch/visdom)
 * [OpenAI baselines](https://github.com/openai/baselines)
 
 In order to install requirements, follow:

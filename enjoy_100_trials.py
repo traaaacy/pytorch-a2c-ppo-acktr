@@ -4,7 +4,7 @@ import numpy as np
 import torch
 
 from a2c_ppo_acktr.envs import VecPyTorch, make_vec_envs
-from a2c_ppo_acktr.utils import get_render_func, get_vec_normalize
+from a2c_ppo_acktr.utils import get_vec_normalize
 
 # workaround to unpickle old model files
 sys.path.append('a2c_ppo_acktr')
@@ -27,8 +27,7 @@ args = parser.parse_args()
 args.det = not args.non_det
 
 env = make_vec_envs(args.env_name, args.seed + 1000, 1,
-                            None, None, args.add_timestep, device='cpu',
-                            allow_early_resets=False)
+                    None, None, args.add_timestep, device='cpu', allow_early_resets=False)
 
 # We need to use the same statistics for normalization as used in training
 actor_critic, ob_rms = torch.load(os.path.join(args.load_dir, args.env_name + ".pt"))
