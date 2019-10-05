@@ -3,6 +3,27 @@
 A PyTorch implementation of PPO for use with the pretrained models provided in [Assistive Gym](https://github.com/Healthcare-Robotics/assistive-gym).  
 This library includes scripts for training and evluating multi agent policies using co-optimization; specifically, `main_dual_agent.py` and `enjoy_dual_agent.py`.
 
+## Installation and pretrained models
+This library and the pretrained policies for Assistive Gym can be downloaded using the following:
+```bash
+pip3 install pytorch torchvision tensorflow
+# Install OpenAI Baselines
+git clone https://github.com/openai/baselines.git
+cd baselines
+pip3 install .
+cd ../
+# Install pytorch RL library
+git clone https://github.com/Zackory/pytorch-a2c-ppo-acktr
+cd pytorch-a2c-ppo-acktr
+pip3 install .
+# Download pretrained policies
+cd trained_models/ppo
+wget -O pretrained_policies.zip https://goo.gl/Xjh6x4
+unzip pretrained_policies.zip
+rm pretrained_policies.zip
+cd ../../
+```
+
 ## Examples
 Refer to [Assistive Gym](https://github.com/Healthcare-Robotics/assistive-gym) for more detailed use cases of this reinforcement learning library.
 
