@@ -43,11 +43,11 @@ python3 main_dual_agent.py --env-name "FeedingSawyerHuman-v0" --num-env-steps 10
 ```
 ### Evaluation - Static human
 ```
-python3 enjoy.py --load-dir trained_models/ppo --env-name "ScratchItchJaco-v0"
+python3 enjoy.py --env-name "ScratchItchJaco-v0"
 ```
 ### Evaluation - Co-optimization, active human and robot
 ```
-python3 enjoy_dual_agent.py --load-dir trained_models/ppo --env-name "FeedingSawyerHuman-v0"
+python3 enjoy_dual_agent.py --env-name "FeedingSawyerHuman-v0"
 ```
 
 ## pytorch-a2c-ppo-acktr-gail

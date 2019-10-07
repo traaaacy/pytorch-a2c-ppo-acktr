@@ -7,7 +7,6 @@ from collections import deque
 
 import gym
 from gym import spaces
-import assistive_gym
 import numpy as np
 import torch
 import torch.nn as nn
