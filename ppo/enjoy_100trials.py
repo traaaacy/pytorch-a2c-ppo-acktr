@@ -16,7 +16,7 @@ parser.add_argument('--log-interval', type=int, default=10,
                     help='log interval, one log per n updates (default: 10)')
 parser.add_argument('--env-name', default='ScratchItchJaco-v0',
                     help='environment to train on (default: ScratchItchJaco-v0)')
-parser.add_argument('--load-dir', default='./trained_models/poo/',
+parser.add_argument('--load-dir', default='./trained_models/ppo/',
                     help='directory to save agent logs (default: ./trained_models/ppo/)')
 parser.add_argument('--add-timestep', action='store_true', default=False,
                     help='add timestep to observations')
