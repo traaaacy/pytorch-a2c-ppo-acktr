@@ -1,27 +1,19 @@
 # pytorch-a2c-ppo-acktr
 
 A PyTorch implementation of PPO for use with the pretrained models provided in [Assistive Gym](https://github.com/Healthcare-Robotics/assistive-gym).  
-This library includes scripts for training and evluating multi agent policies using co-optimization; specifically, `main_dual_agent.py` and `enjoy_dual_agent.py`.
+This library includes scripts for training and evluating multi agent policies using co-optimization; specifically, [train_coop.py](https://github.com/Zackory/pytorch-a2c-ppo-acktr/blob/master/ppo/train_coop.py) and [enjoy_coop.py](https://github.com/Zackory/pytorch-a2c-ppo-acktr/blob/master/ppo/enjoy_coop.py).
 
 ## Installation and pretrained models
 This library and the pretrained policies for Assistive Gym can be downloaded using the following:
 ```bash
-pip3 install pytorch torchvision tensorflow
 # Install OpenAI Baselines
-git clone https://github.com/openai/baselines.git
-cd baselines
-pip3 install .
-cd ../
-# Install pytorch RL library
-git clone https://github.com/Zackory/pytorch-a2c-ppo-acktr
-cd pytorch-a2c-ppo-acktr
-pip3 install .
+pip3 install git+https://github.com/openai/baselines.git
+# Install PyTorch RL library
+pip3 install git+https://github.com/Zackory/pytorch-a2c-ppo-acktr
 # Download pretrained policies
-cd trained_models/ppo
-wget -O pretrained_policies.zip https://goo.gl/Xjh6x4
-unzip pretrained_policies.zip
-rm pretrained_policies.zip
-cd ../../
+cd assistive-gym
+wget -O trained_models/ppo/pretrained_policies.zip https://github.gatech.edu/zerickson3/assistive-gym/releases/download/0.100/pretrained_policies.zip
+unzip trained_models/ppo/pretrained_policies.zip -d trained_models/ppo
 ```
 
 ## Examples
@@ -29,25 +21,25 @@ Refer to [Assistive Gym](https://github.com/Healthcare-Robotics/assistive-gym) f
 
 ### Training - Static human
 ```bash
-python3 main.py --env-name "ScratchItchJaco-v0" --num-env-steps 10000000
+python3 -m ppo.train --env-name "ScratchItchJaco-v0" --num-env-steps 10000000
 ```
 We suggest using `nohup` to train policies in the background, disconnected from the terminal instance.
 ```bash
-nohup python3 main.py --env-name "ScratchItchJaco-v0" --num-env-steps 10000000 --save-dir ./trained_models/ > nohup.out &
+nohup python3 -m ppo.train --env-name "ScratchItchJaco-v0" --num-env-steps 10000000 --save-dir ./trained_models/ > nohup.out &
 ```
-See [arguments.py](https://github.com/Zackory/pytorch-a2c-ppo-acktr/blob/master/a2c_ppo_acktr/arguments.py) for a full list of available arguments and hyperparameters.
+See [arguments.py](https://github.com/Zackory/pytorch-a2c-ppo-acktr/blob/master/ppo/a2c_ppo_acktr/arguments.py) for a full list of available arguments and hyperparameters.
 
 ### Training - Co-optimization, active human and robot
 ```bash
-python3 main_dual_agent.py --env-name "FeedingSawyerHuman-v0" --num-env-steps 10000000
+python3 -m ppo.train_coop --env-name "FeedingSawyerHuman-v0" --num-env-steps 10000000
 ```
 ### Evaluation - Static human
 ```
-python3 enjoy.py --env-name "ScratchItchJaco-v0"
+python3 -m ppo.enjoy --env-name "ScratchItchJaco-v0"
 ```
 ### Evaluation - Co-optimization, active human and robot
 ```
-python3 enjoy_dual_agent.py --env-name "FeedingSawyerHuman-v0"
+python3 -m ppo.enjoy_coop --env-name "FeedingSawyerHuman-v0"
 ```
 
 ## pytorch-a2c-ppo-acktr-gail
@@ -69,18 +61,3 @@ Please use this bibtex if you want to cite this repository in your publications:
 * Python 3
 * [PyTorch](http://pytorch.org/)
 * [OpenAI baselines](https://github.com/openai/baselines)
-
-In order to install requirements, follow:
-
-```bash
-# PyTorch
-conda install pytorch torchvision -c soumith
-
-# Baselines for Atari preprocessing
-git clone https://github.com/openai/baselines.git
-cd baselines
-pip install -e .
-
-# Other requirements
-pip install -r requirements.txt
-```
