@@ -12,7 +12,7 @@ pip3 install git+https://github.com/openai/baselines.git
 pip3 install git+https://github.com/Zackory/pytorch-a2c-ppo-acktr
 # Download pretrained policies
 cd assistive-gym
-wget -O trained_models/ppo/pretrained_policies.zip https://github.gatech.edu/zerickson3/assistive-gym/releases/download/0.100/pretrained_policies.zip
+wget -O trained_models/ppo/pretrained_policies.zip https://github.com/Healthcare-Robotics/assistive-gym/releases/download/0.100/pretrained_policies.zip
 unzip trained_models/ppo/pretrained_policies.zip -d trained_models/ppo
 ```
 
