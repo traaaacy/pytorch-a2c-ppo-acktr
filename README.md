@@ -4,7 +4,8 @@ A PyTorch implementation of PPO for use with the pretrained models provided in [
 This library includes scripts for training and evluating multi agent policies using co-optimization; specifically, [train_coop.py](https://github.com/Zackory/pytorch-a2c-ppo-acktr/blob/master/ppo/train_coop.py) and [enjoy_coop.py](https://github.com/Zackory/pytorch-a2c-ppo-acktr/blob/master/ppo/enjoy_coop.py).
 
 ## Installation and pretrained models
-This library and the pretrained policies for Assistive Gym can be downloaded using the following:
+This library and the pretrained policies for Assistive Gym can be downloaded using the following commands.  
+If you do not have `wget` installed on your machine, you can download the models directly from the [Assistive Gym GitHub release page](https://github.com/Healthcare-Robotics/assistive-gym/releases/download/0.100/pretrained_policies.zip).
 ```bash
 # Install OpenAI Baselines
 pip3 install git+https://github.com/openai/baselines.git
