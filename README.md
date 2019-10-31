@@ -10,7 +10,7 @@ If you do not have `wget` installed on your machine, you can download the models
 # Install OpenAI Baselines
 pip3 install git+https://github.com/openai/baselines.git
 # Install PyTorch RL library
-pip3 install git+https://github.com/Zackory/pytorch-a2c-ppo-acktr
+pip3 install git+https://github.com/Zackory/pytorch-a2c-ppo-acktr --no-cache-dir
 # Download pretrained policies
 cd assistive-gym
 wget -O trained_models/ppo/pretrained_policies.zip https://github.com/Healthcare-Robotics/assistive-gym/releases/download/0.100/pretrained_policies.zip
