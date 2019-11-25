@@ -66,8 +66,15 @@ def main():
     envs = make_vec_envs(args.env_name, args.seed, args.num_processes,
                         args.gamma, args.log_dir, args.add_timestep, device, False)
 
-    actor_critic = Policy(envs.observation_space.shape, envs.action_space,
-        base_kwargs={'recurrent': args.recurrent_policy})
+    if args.load_policy is not None:
+        actor_critic, ob_rms = torch.load(args.load_policy)
+        vec_norm = get_vec_normalize(envs)
+        if vec_norm is not None:
+            vec_norm.eval()
+            vec_norm.ob_rms = ob_rms
+    else:
+        actor_critic = Policy(envs.observation_space.shape, envs.action_space,
+            base_kwargs={'recurrent': args.recurrent_policy})
     actor_critic.to(device)
 
     if args.algo == 'a2c':
