@@ -1,8 +1,4 @@
-import copy
-import glob
-import os
-import time
-import sys
+import os, sys, time, copy, glob
 from collections import deque
 
 import gym
@@ -41,8 +37,11 @@ try:
     os.makedirs(args.log_dir)
 except OSError:
     files = glob.glob(os.path.join(args.log_dir, '*.monitor.csv'))
-    for f in files:
-        os.remove(f)
+    try:
+        for f in files:
+            os.remove(f)
+    except PermissionError as e:
+        pass
 
 eval_log_dir = args.log_dir + "_eval"
 
@@ -50,9 +49,11 @@ try:
     os.makedirs(eval_log_dir)
 except OSError:
     files = glob.glob(os.path.join(eval_log_dir, '*.monitor.csv'))
-    for f in files:
-        os.remove(f)
-
+    try:
+        for f in files:
+            os.remove(f)
+    except PermissionError as e:
+        pass
 
 def main():
     torch.set_num_threads(1)
