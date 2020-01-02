@@ -93,12 +93,18 @@ def main():
     action_space_robot = spaces.Box(low=np.array([-1.0]*action_robot_len), high=np.array([1.0]*action_robot_len), dtype=np.float32)
     action_space_human = spaces.Box(low=np.array([-1.0]*action_human_len), high=np.array([1.0]*action_human_len), dtype=np.float32)
 
-    actor_critic_robot = Policy([obs_robot_len], action_space_robot,
-        base_kwargs={'recurrent': args.recurrent_policy})
+    if args.load_policy is not None:
+        actor_critic_robot, actor_critic_human, ob_rms = torch.load(args.load_policy)
+        vec_norm = get_vec_normalize(envs)
+        if vec_norm is not None:
+            vec_norm.eval()
+            vec_norm.ob_rms = ob_rms
+    else:
+        actor_critic_robot = Policy([obs_robot_len], action_space_robot,
+            base_kwargs={'recurrent': args.recurrent_policy})
+        actor_critic_human = Policy([obs_human_len], action_space_human,
+            base_kwargs={'recurrent': args.recurrent_policy})
     actor_critic_robot.to(device)
-
-    actor_critic_human = Policy([obs_human_len], action_space_human,
-        base_kwargs={'recurrent': args.recurrent_policy})
     actor_critic_human.to(device)
 
     if args.algo == 'a2c':
