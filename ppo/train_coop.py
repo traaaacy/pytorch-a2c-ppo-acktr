@@ -138,7 +138,7 @@ def main():
     rollouts_human.obs[0].copy_(obs_human)
     rollouts_human.to(device)
 
-    episode_rewards = deque(maxlen=args.num_processes)
+    episode_rewards = deque(maxlen=(args.num_processes if args.num_processes > 10 else 10))
 
     start = time.time()
     for j in range(num_updates):
