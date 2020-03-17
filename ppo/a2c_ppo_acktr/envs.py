@@ -75,7 +75,7 @@ def make_env(env_id, seed, rank, log_dir, add_timestep, allow_early_resets, setu
     return _thunk
 
 def make_vec_envs(env_name, seed, num_processes, gamma, log_dir, add_timestep,
-                  device, allow_early_resets, num_frame_stack=None, setup_function=None):
+                  device, allow_early_resets, num_frame_stack=None, setup_function=None, return_orig_obs=False):
     envs = [make_env(env_name, seed, i, log_dir, add_timestep, allow_early_resets, setup_function=setup_function)
             for i in range(num_processes)]
 
@@ -86,11 +86,11 @@ def make_vec_envs(env_name, seed, num_processes, gamma, log_dir, add_timestep,
 
     if len(envs.observation_space.shape) == 1:
         if gamma is None:
-            envs = VecNormalize(envs, ret=False)
+            envs = VecNormalize(return_orig_obs=return_orig_obs, venv=envs, ret=False)
         else:
-            envs = VecNormalize(envs, gamma=gamma)
+            envs = VecNormalize(return_orig_obs=return_orig_obs, venv=envs, gamma=gamma)
 
-    envs = VecPyTorch(envs, device)
+    envs = VecPyTorch(envs, device, return_orig_obs=return_orig_obs)
 
     if num_frame_stack is not None:
         envs = VecPyTorchFrameStack(envs, num_frame_stack, device)
@@ -136,10 +136,11 @@ class TransposeImage(gym.ObservationWrapper):
 
 
 class VecPyTorch(VecEnvWrapper):
-    def __init__(self, venv, device):
+    def __init__(self, venv, device, return_orig_obs=False):
         """Return only every `skip`-th frame"""
         super(VecPyTorch, self).__init__(venv)
         self.device = device
+        self.return_orig_obs = return_orig_obs
         # TODO: Fix data types
 
     def reset(self):
@@ -152,17 +153,36 @@ class VecPyTorch(VecEnvWrapper):
         self.venv.step_async(actions)
 
     def step_wait(self):
-        obs, reward, done, info = self.venv.step_wait()
+        if self.return_orig_obs:
+            obs_orig, obs, reward, done, info = self.venv.step_wait()
+        else:
+            obs, reward, done, info = self.venv.step_wait()
         obs = torch.from_numpy(obs).float().to(self.device)
         reward = torch.from_numpy(reward).unsqueeze(dim=1).float()
+        if self.return_orig_obs:
+            return obs_orig, obs, reward, done, info
         return obs, reward, done, info
 
 
 class VecNormalize(VecNormalize_):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, return_orig_obs=False, *args, **kwargs):
         super(VecNormalize, self).__init__(*args, **kwargs)
         self.training = True
+        self.return_orig_obs = return_orig_obs
+
+    def step_wait(self):
+        obs, rews, news, infos = self.venv.step_wait()
+        obs_orig = obs
+        self.ret = self.ret * self.gamma + rews
+        obs = self._obfilt(obs)
+        if self.ret_rms:
+            self.ret_rms.update(self.ret)
+            rews = np.clip(rews / np.sqrt(self.ret_rms.var + self.epsilon), -self.cliprew, self.cliprew)
+        self.ret[news] = 0.
+        if self.return_orig_obs:
+            return obs_orig, obs, rews, news, infos
+        return obs, rews, news, infos
 
     def _obfilt(self, obs):
         if self.ob_rms:
