@@ -16,9 +16,13 @@ cd assistive-gym
 wget -O trained_models/ppo/pretrained_policies.zip https://github.com/Healthcare-Robotics/assistive-gym/releases/download/0.100/pretrained_policies.zip
 unzip trained_models/ppo/pretrained_policies.zip -d trained_models/ppo
 ```
-If you receive an error during installation due to MPI, you may need to install the missing MPI package. On Linux, this can be resolved with:
+If you receive an error during installation due to MPI (mpi4py), you may need to install the missing MPI package. On Linux, this can be resolved with:
 ```bash
 sudo apt install libopenmpi-dev
+```
+or on Mac with:
+```bash
+brew install mpich
 ```
 
 ## Examples
