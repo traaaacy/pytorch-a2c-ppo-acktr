@@ -4,8 +4,8 @@ import os
 import numpy as np
 import torch
 
-from a2c_ppo_acktr.envs import VecPyTorch, make_vec_envs
-from a2c_ppo_acktr.utils import get_vec_normalize
+from ppo.a2c_ppo_acktr.envs import VecPyTorch, make_vec_envs
+from ppo.a2c_ppo_acktr.utils import get_vec_normalize
 
 
 # workaround to unpickle olf model files
