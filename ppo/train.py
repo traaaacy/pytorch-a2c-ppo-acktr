@@ -143,10 +143,10 @@ def main():
                                args.entropy_coef, acktr=True)
 
     if dual_robots:
-        rollouts_robot1 = RolloutStorage(args.num_steps, args.num_processes,
+        rollouts_robot1 = RolloutStorage(args.num_steps, args.num_rollouts if args.num_rollouts > 0 else args.num_processes,
                             [obs_robot_len], action_space_robot1,
                             actor_critic_robot1.recurrent_hidden_state_size)
-        rollouts_robot2 = RolloutStorage(args.num_steps, args.num_processes,
+        rollouts_robot2 = RolloutStorage(args.num_steps, args.num_rollouts if args.num_rollouts > 0 else args.num_processes,
                             [obs_robot_len], action_space_robot2,
                             actor_critic_robot2.recurrent_hidden_state_size)
         rollouts_robot1.obs[0].copy_(obs_robot1)
@@ -154,18 +154,19 @@ def main():
         rollouts_robot2.obs[0].copy_(obs_robot2)
         rollouts_robot2.to(device)
     else:
-        rollouts = RolloutStorage(args.num_steps, args.num_processes,
+        rollouts = RolloutStorage(args.num_steps, args.num_rollouts if args.num_rollouts > 0 else args.num_processes,
                             envs.observation_space.shape, envs.action_space,
                             actor_critic.recurrent_hidden_state_size)
         obs = envs.reset()
         rollouts.obs[0].copy_(obs)
         rollouts.to(device)
 
+    deque_len = args.num_rollouts if args.num_rollouts > 0 else (args.num_processes if args.num_processes > 10 else 10)
     if dual_robots:
-        episode_rewards_robot1 = deque(maxlen=(args.num_processes if args.num_processes > 10 else 10))
-        episode_rewards_robot2 = deque(maxlen=(args.num_processes if args.num_processes > 10 else 10))
+        episode_rewards_robot1 = deque(maxlen=deque_len)
+        episode_rewards_robot2 = deque(maxlen=deque_len)
     else:
-        episode_rewards = deque(maxlen=(args.num_processes if args.num_processes > 10 else 10))
+        episode_rewards = deque(maxlen=deque_len)
 
     start = time.time()
     for j in range(num_updates):

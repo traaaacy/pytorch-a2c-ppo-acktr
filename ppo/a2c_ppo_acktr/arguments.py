@@ -30,6 +30,8 @@ def get_args():
                         help='how many training CPU processes to use (default: 0 (max))')
     parser.add_argument('--num-steps', type=int, default=200,
                         help='number of forward steps in A2C/PPO (default: 200)')
+    parser.add_argument('--num-rollouts', type=int, default=0,
+                        help='how many rollouts to store and train a model on (default: 0 (i.e. uses num-processes))')
     parser.add_argument('--ppo-epoch', type=int, default=10,
                         help='number of ppo epochs (default: 10)')
     parser.add_argument('--num-mini-batch', type=int, default=32,

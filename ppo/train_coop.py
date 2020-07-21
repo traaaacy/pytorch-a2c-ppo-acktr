@@ -127,10 +127,10 @@ def main():
         agent = algo.A2C_ACKTR(actor_critic, args.value_loss_coef,
                                args.entropy_coef, acktr=True)
 
-    rollouts_robot = RolloutStorage(args.num_steps, args.num_processes,
+    rollouts_robot = RolloutStorage(args.num_steps, args.num_rollouts if args.num_rollouts > 0 else args.num_processes,
                         [obs_robot_len], action_space_robot,
                         actor_critic_robot.recurrent_hidden_state_size)
-    rollouts_human = RolloutStorage(args.num_steps, args.num_processes,
+    rollouts_human = RolloutStorage(args.num_steps, args.num_rollouts if args.num_rollouts > 0 else args.num_processes,
                         [obs_human_len], action_space_human,
                         actor_critic_human.recurrent_hidden_state_size)
     rollouts_robot.obs[0].copy_(obs_robot)
@@ -138,7 +138,8 @@ def main():
     rollouts_human.obs[0].copy_(obs_human)
     rollouts_human.to(device)
 
-    episode_rewards = deque(maxlen=(args.num_processes if args.num_processes > 10 else 10))
+    deque_len = args.num_rollouts if args.num_rollouts > 0 else (args.num_processes if args.num_processes > 10 else 10)
+    episode_rewards = deque(maxlen=deque_len)
 
     start = time.time()
     for j in range(num_updates):
