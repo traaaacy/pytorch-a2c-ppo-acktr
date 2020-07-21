@@ -42,7 +42,7 @@ class RolloutStorage(object):
             obs_len = len(obs)
             rollout_len = len(self.obs[self.step + 1])
             end_step = (self.iteration+obs_len) if (self.iteration+obs_len) < rollout_len else rollout_len
-            copy_len = obs_len - (end_step % rollout_len) if (self.iteration+obs_len) > rollout_len else obs_len
+            copy_len = obs_len - ((self.iteration+obs_len) % rollout_len) if (self.iteration+obs_len) > rollout_len else obs_len
             self.obs[self.step + 1, self.iteration:end_step].copy_(obs[:copy_len])
             self.recurrent_hidden_states[self.step + 1, self.iteration:end_step].copy_(recurrent_hidden_states[:copy_len])
             self.actions[self.step, self.iteration:end_step].copy_(actions[:copy_len])
