@@ -163,7 +163,7 @@ def main():
                             actor_critic.recurrent_hidden_state_size)
         obs = envs.reset()
         if args.num_rollouts > 0:
-            rollouts.obs[0].copy_(np.concatenate([obs for _ in range(args.num_rollouts // args.num_processes)] + [obs[:(args.num_rollouts % args.num_processes)]], axis=0))
+            rollouts.obs[0].copy_(torch.cat([obs for _ in range(args.num_rollouts // args.num_processes)] + [obs[:(args.num_rollouts % args.num_processes)]], dim=0))
         else:
             rollouts.obs[0].copy_(obs)
         rollouts.to(device)
