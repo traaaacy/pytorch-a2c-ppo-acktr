@@ -38,7 +38,6 @@ class RolloutStorage(object):
         self.masks = self.masks.to(device)
 
     def insert(self, obs, recurrent_hidden_states, actions, action_log_probs, value_preds, rewards, masks):
-        # print(obs.shape, recurrent_hidden_states.shape, actions.shape, action_log_probs.shape, value_preds.shape, rewards.shape, masks.shape)
         if len(obs) != len(self.obs[self.step + 1]):
             obs_len = len(obs)
             rollout_len = len(self.obs[self.step + 1])
@@ -57,25 +56,6 @@ class RolloutStorage(object):
             self.value_preds[self.step, :obs_len].copy_(value_preds)
             self.rewards[self.step, :obs_len].copy_(rewards)
             self.masks[self.step + 1, :obs_len].copy_(masks)
-
-            # end_step = (self.iteration+obs_len) if (self.iteration+obs_len) < rollout_len else rollout_len
-            # copy_len = obs_len - ((self.iteration+obs_len) % rollout_len) if (self.iteration+obs_len) > rollout_len else obs_len
-            # self.obs[self.step + 1, self.iteration:end_step].copy_(obs[:copy_len])
-            # self.recurrent_hidden_states[self.step + 1, self.iteration:end_step].copy_(recurrent_hidden_states[:copy_len])
-            # self.actions[self.step, self.iteration:end_step].copy_(actions[:copy_len])
-            # self.action_log_probs[self.step, self.iteration:end_step].copy_(action_log_probs[:copy_len])
-            # self.value_preds[self.step, self.iteration:end_step].copy_(value_preds[:copy_len])
-            # self.rewards[self.step, self.iteration:end_step].copy_(rewards[:copy_len])
-            # self.masks[self.step + 1, self.iteration:end_step].copy_(masks[:copy_len])
-            # if self.iteration+obs_len > rollout_len:
-            #     rem_len = (self.iteration+obs_len) % rollout_len
-            #     self.obs[self.step + 1, :rem_len].copy_(obs[copy_len:])
-            #     self.recurrent_hidden_states[self.step + 1, :rem_len].copy_(recurrent_hidden_states[copy_len:])
-            #     self.actions[self.step, :rem_len].copy_(actions[copy_len:])
-            #     self.action_log_probs[self.step, :rem_len].copy_(action_log_probs[copy_len:])
-            #     self.value_preds[self.step, :rem_len].copy_(value_preds[copy_len:])
-            #     self.rewards[self.step, :rem_len].copy_(rewards[copy_len:])
-            #     self.masks[self.step + 1, :rem_len].copy_(masks[copy_len:])
         else:
             self.obs[self.step + 1].copy_(obs)
             self.recurrent_hidden_states[self.step + 1].copy_(recurrent_hidden_states)
