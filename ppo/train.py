@@ -204,18 +204,18 @@ def main():
             with torch.no_grad():
                 if dual_robots:
                     value_robot1, action_robot1, action_log_prob_robot1, recurrent_hidden_states_robot1 = actor_critic_robot1.act(
-                            rollouts_robot1.obs[step],
-                            rollouts_robot1.recurrent_hidden_states[step],
-                            rollouts_robot1.masks[step])
+                            rollouts_robot1.obs[step, :args.num_processes],
+                            rollouts_robot1.recurrent_hidden_states[step, :args.num_processes],
+                            rollouts_robot1.masks[step, :args.num_processes])
                     value_robot2, action_robot2, action_log_prob_robot2, recurrent_hidden_states_robot2 = actor_critic_robot2.act(
-                            rollouts_robot2.obs[step],
-                            rollouts_robot2.recurrent_hidden_states[step],
-                            rollouts_robot2.masks[step])
+                            rollouts_robot2.obs[step, :args.num_processes],
+                            rollouts_robot2.recurrent_hidden_states[step, :args.num_processes],
+                            rollouts_robot2.masks[step, :args.num_processes])
                 else:
                     value, action, action_log_prob, recurrent_hidden_states = actor_critic.act(
-                            rollouts.obs[step],
-                            rollouts.recurrent_hidden_states[step],
-                            rollouts.masks[step])
+                            rollouts.obs[step, :args.num_processes],
+                            rollouts.recurrent_hidden_states[step, :args.num_processes],
+                            rollouts.masks[step, :args.num_processes])
 
             # Obser reward and next obs
             if dual_robots:

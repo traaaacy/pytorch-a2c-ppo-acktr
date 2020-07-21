@@ -165,13 +165,13 @@ def main():
             # Sample actions
             with torch.no_grad():
                 value_robot, action_robot, action_log_prob_robot, recurrent_hidden_states_robot = actor_critic_robot.act(
-                        rollouts_robot.obs[step],
-                        rollouts_robot.recurrent_hidden_states[step],
-                        rollouts_robot.masks[step])
+                        rollouts_robot.obs[step, :args.num_processes],
+                        rollouts_robot.recurrent_hidden_states[step, :args.num_processes],
+                        rollouts_robot.masks[step, :args.num_processes])
                 value_human, action_human, action_log_prob_human, recurrent_hidden_states_human = actor_critic_human.act(
-                        rollouts_human.obs[step],
-                        rollouts_human.recurrent_hidden_states[step],
-                        rollouts_human.masks[step])
+                        rollouts_human.obs[step, :args.num_processes],
+                        rollouts_human.recurrent_hidden_states[step, :args.num_processes],
+                        rollouts_human.masks[step, :args.num_processes])
 
             # Obser reward and next obs
             action = torch.cat((action_robot, action_human), dim=-1)
