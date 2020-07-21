@@ -133,9 +133,13 @@ def main():
     rollouts_human = RolloutStorage(args.num_steps, args.num_rollouts if args.num_rollouts > 0 else args.num_processes,
                         [obs_human_len], action_space_human,
                         actor_critic_human.recurrent_hidden_state_size)
-    rollouts_robot.obs[0].copy_(obs_robot)
+    if args.num_rollouts > 0:
+        rollouts_robot.obs[0].copy_(np.concatenate([obs_robot for _ in range(args.num_rollouts // args.num_processes)] + [obs_robot[:(args.num_rollouts % args.num_processes)]], axis=0))
+        rollouts_human.obs[0].copy_(np.concatenate([obs_human for _ in range(args.num_rollouts // args.num_processes)] + [obs_human[:(args.num_rollouts % args.num_processes)]], axis=0))
+    else:
+        rollouts_robot.obs[0].copy_(obs_robot)
+        rollouts_human.obs[0].copy_(obs_human)
     rollouts_robot.to(device)
-    rollouts_human.obs[0].copy_(obs_human)
     rollouts_human.to(device)
 
     deque_len = args.num_rollouts if args.num_rollouts > 0 else (args.num_processes if args.num_processes > 10 else 10)

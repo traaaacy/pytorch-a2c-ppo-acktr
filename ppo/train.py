@@ -149,16 +149,23 @@ def main():
         rollouts_robot2 = RolloutStorage(args.num_steps, args.num_rollouts if args.num_rollouts > 0 else args.num_processes,
                             [obs_robot_len], action_space_robot2,
                             actor_critic_robot2.recurrent_hidden_state_size)
-        rollouts_robot1.obs[0].copy_(obs_robot1)
+        if args.num_rollouts > 0:
+            rollouts_robot1.obs[0].copy_(np.concatenate([obs_robot1 for _ in range(args.num_rollouts // args.num_processes)] + [obs_robot1[:(args.num_rollouts % args.num_processes)]], axis=0))
+            rollouts_robot2.obs[0].copy_(np.concatenate([obs_robot2 for _ in range(args.num_rollouts // args.num_processes)] + [obs_robot2[:(args.num_rollouts % args.num_processes)]], axis=0))
+        else:
+            rollouts_robot1.obs[0].copy_(obs_robot1)
+            rollouts_robot2.obs[0].copy_(obs_robot2)
         rollouts_robot1.to(device)
-        rollouts_robot2.obs[0].copy_(obs_robot2)
         rollouts_robot2.to(device)
     else:
         rollouts = RolloutStorage(args.num_steps, args.num_rollouts if args.num_rollouts > 0 else args.num_processes,
                             envs.observation_space.shape, envs.action_space,
                             actor_critic.recurrent_hidden_state_size)
         obs = envs.reset()
-        rollouts.obs[0].copy_(obs)
+        if args.num_rollouts > 0:
+            rollouts.obs[0].copy_(np.concatenate([obs for _ in range(args.num_rollouts // args.num_processes)] + [obs[:(args.num_rollouts % args.num_processes)]], axis=0))
+        else:
+            rollouts.obs[0].copy_(obs)
         rollouts.to(device)
 
     deque_len = args.num_rollouts if args.num_rollouts > 0 else (args.num_processes if args.num_processes > 10 else 10)
