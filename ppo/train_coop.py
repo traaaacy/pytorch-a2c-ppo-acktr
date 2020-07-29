@@ -25,6 +25,9 @@ if args.recurrent_policy:
     assert args.algo in ['a2c', 'ppo'], \
         'Recurrent policy is not implemented for ACKTR'
 
+if args.num_rollouts > 0:
+    assert args.num_rollouts % args.num_processes == 0, 'num_rollouts must be divisable by num_processes'
+
 num_updates = int(args.num_env_steps) // args.num_steps // args.num_processes
 
 torch.manual_seed(args.seed)
@@ -188,6 +191,10 @@ def main():
                                        for done_ in done])
             rollouts_robot.insert(obs_robot, recurrent_hidden_states_robot, action_robot, action_log_prob_robot, value_robot, reward, masks)
             rollouts_human.insert(obs_human, recurrent_hidden_states_human, action_human, action_log_prob_human, value_human, reward, masks)
+
+        if args.num_rollouts > 0 and (j % (args.num_rollouts // args.num_processes) != 0):
+            # Only update the policies when we have performed num_rollouts simulations
+            continue
 
         with torch.no_grad():
             next_value_robot = actor_critic_robot.get_value(rollouts_robot.obs[-1],
