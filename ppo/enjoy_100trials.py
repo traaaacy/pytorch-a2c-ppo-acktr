@@ -6,7 +6,9 @@ import torch
 from ppo.a2c_ppo_acktr.envs import VecPyTorch, make_vec_envs
 from ppo.a2c_ppo_acktr.utils import get_vec_normalize
 
-# workaround to unpickle old model files
+# Workaround to unpickle old model files
+import ppo.a2c_ppo_acktr
+sys.modules['a2c_ppo_acktr'] = ppo.a2c_ppo_acktr
 sys.path.append('a2c_ppo_acktr')
 
 parser = argparse.ArgumentParser(description='RL')
