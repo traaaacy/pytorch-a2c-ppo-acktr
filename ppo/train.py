@@ -104,7 +104,6 @@ def main():
             actor_critic, ob_rms = torch.load(args.load_policy)
         vec_norm = get_vec_normalize(envs)
         if vec_norm is not None:
-            vec_norm.eval()
             vec_norm.ob_rms = ob_rms
     else:
         if dual_robots:
