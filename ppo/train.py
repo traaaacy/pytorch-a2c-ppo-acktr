@@ -25,6 +25,10 @@ if args.recurrent_policy:
     assert args.algo in ['a2c', 'ppo'], \
         'Recurrent policy is not implemented for ACKTR'
 
+if args.num_rollouts == 0:
+    # Find a number of rollouts such that num_rollouts % num_processes == 0 and num_rollouts >= 30
+    while args.num_rollouts < 30:
+        args.num_rollouts += args.num_processes
 if args.num_rollouts > 0:
     assert args.num_rollouts % args.num_processes == 0, 'num_rollouts must be divisable by num_processes'
 

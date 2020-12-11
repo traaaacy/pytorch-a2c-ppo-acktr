@@ -7,10 +7,10 @@ This library includes scripts for training and evluating multi agent policies us
 This library and the pretrained policies for Assistive Gym can be downloaded using the following commands.  
 If you do not have `wget` installed on your machine, you can download the models directly from the [Assistive Gym GitHub release page](https://github.com/Healthcare-Robotics/assistive-gym/releases/download/0.100/pretrained_policies.zip).
 ```bash
-# Install OpenAI Baselines
-pip3 install git+https://github.com/openai/baselines.git
 # Install PyTorch RL library
 pip3 install git+https://github.com/Zackory/pytorch-a2c-ppo-acktr --no-cache-dir
+# Install OpenAI Baselines
+pip3 install git+https://github.com/openai/baselines.git
 # Download pretrained policies
 cd assistive-gym
 wget -O trained_models/ppo/pretrained_policies.zip https://github.com/Healthcare-Robotics/assistive-gym/releases/download/0.100/pretrained_policies.zip
@@ -30,25 +30,37 @@ Refer to [Assistive Gym](https://github.com/Healthcare-Robotics/assistive-gym) f
 
 ### Training - Static human
 ```bash
-python3 -m ppo.train --env-name "ScratchItchJaco-v0" --num-env-steps 10000000
+python3 -m ppo.train --env-name "ScratchItchJaco-v1" --num-env-steps 10000000
 ```
 We suggest using `nohup` to train policies in the background, disconnected from the terminal instance.
 ```bash
-nohup python3 -m ppo.train --env-name "ScratchItchJaco-v0" --num-env-steps 10000000 --save-dir ./trained_models/ > nohup.out &
+nohup python3 -m ppo.train --env-name "ScratchItchJaco-v1" --num-env-steps 10000000 --save-dir ./trained_models/ > nohup.out &
 ```
 See [arguments.py](https://github.com/Zackory/pytorch-a2c-ppo-acktr/blob/master/ppo/a2c_ppo_acktr/arguments.py) for a full list of available arguments and hyperparameters.
 
 ### Training - Co-optimization, active human and robot
 ```bash
-python3 -m ppo.train_coop --env-name "FeedingSawyerHuman-v0" --num-env-steps 10000000
+python3 -m ppo.train_coop --env-name "FeedingSawyerHuman-v1" --num-env-steps 10000000
 ```
-### Evaluation - Static human
+### Resume training from an existing policy
+```bash
+python3 -m ppo.train --env-name "FeedingSawyer-v1" --num-env-steps 2000000 --save-dir ./trained_models_new/ --load-policy ./trained_models/ppo/FeedingSawyer-v1.pt
 ```
-python3 -m ppo.enjoy --env-name "ScratchItchJaco-v0"
+### Visual Evaluation - Static human
+```bash
+python3 -m ppo.enjoy --env-name "ScratchItchJaco-v1"
 ```
-### Evaluation - Co-optimization, active human and robot
+### Visual Evaluation - Co-optimization, active human and robot
+```bash
+python3 -m ppo.enjoy_coop --env-name "FeedingSawyerHuman-v1"
 ```
-python3 -m ppo.enjoy_coop --env-name "FeedingSawyerHuman-v0"
+### Quantitative Evaluation over 100 trails - Static human
+```bash
+python3 -m ppo.enjoy_100trials --env-name "ScratchItchJaco-v1"
+```
+### Quantitative Evaluation over 100 trails - Active human from co-optimization
+```bash
+python3 -m ppo.enjoy_coop_100trials --env-name "FeedingSawyerHuman-v1"
 ```
 
 ## pytorch-a2c-ppo-acktr-gail
